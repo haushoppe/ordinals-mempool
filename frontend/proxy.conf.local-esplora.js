@@ -21,10 +21,16 @@ try {
 console.log('** USING PROXY_CONFIG FROM proxy.conf.local-esplora.js ***');
 
 let PROXY_CONFIG = [
-  // HACK - this is just for local development, enter your own ord server here if available
   {
     context: ['/content/**'],
-    target: 'https://ordinals.com',
+    target: `http://127.0.0.1:8999`,
+    secure: false,
+    changeOrigin: true,
+    proxyTimeout: 30000
+  },
+  {
+    context: ['/preview/**'],
+    target: `http://127.0.0.1:8999`,
     secure: false,
     changeOrigin: true,
     proxyTimeout: 30000
@@ -35,62 +41,8 @@ let PROXY_CONFIG = [
     secure: false,
     changeOrigin: true,
     proxyTimeout: 30000
-  },
-  {
-    context: ['/preview/**'],
-    target: 'https://ordinals.com',
-    secure: false,
-    changeOrigin: true,
-    proxyTimeout: 30000
   }
 ];
-
-if (configContent && configContent.BASE_MODULE === 'liquid') {
-  PROXY_CONFIG.push(...[
-    {
-      context: ['/liquid/api/v1/**'],
-      target: `http://127.0.0.1:8999`,
-      secure: false,
-      ws: true,
-      changeOrigin: true,
-      proxyTimeout: 30000,
-      pathRewrite: {
-          "^/liquid": ""
-      },
-    },
-    {
-      context: ['/liquid/api/**'],
-      target: `http://127.0.0.1:3000`,
-      secure: false,
-      changeOrigin: true,
-      proxyTimeout: 30000,
-      pathRewrite: {
-          "^/liquid/api/": ""
-      },
-    },
-    {
-      context: ['/liquidtestnet/api/v1/**'],
-      target: `http://127.0.0.1:8999`,
-      secure: false,
-      ws: true,
-      changeOrigin: true,
-      proxyTimeout: 30000,
-      pathRewrite: {
-          "^/liquidtestnet": ""
-      },
-    },
-    {
-      context: ['/liquidtestnet/api/**'],
-      target: `http://127.0.0.1:3000`,
-      secure: false,
-      changeOrigin: true,
-      proxyTimeout: 30000,
-      pathRewrite: {
-          "^/liquidtestnet/api/": "/"
-      },
-    },
-  ]);
-}
 
 PROXY_CONFIG.push(...[
   {
@@ -121,7 +73,7 @@ PROXY_CONFIG.push(...[
   },
   {
     context: ['/api/**'],
-    target: `http://34.160.92.208:80`,
+    target: `http://127.0.0.1:3000`,
     secure: false,
     changeOrigin: true,
     proxyTimeout: 30000,

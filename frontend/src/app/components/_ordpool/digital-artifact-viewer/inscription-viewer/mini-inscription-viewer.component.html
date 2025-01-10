@@ -1,0 +1,10 @@
+@if(inscriptionId) {
+  <div class="mx-auto" title="{{ inscriptionId }}">
+    <iframe
+      [src]="'/preview/' + inscriptionId | safeResourceUrl"
+      sandbox="allow-scripts" 
+      scrolling="no" 
+      loading="lazy"
+    ></iframe>
+  </div>
+}

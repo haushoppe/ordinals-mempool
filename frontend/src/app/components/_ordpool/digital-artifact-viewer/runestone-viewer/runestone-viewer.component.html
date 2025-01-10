@@ -1,0 +1,307 @@
+<div *ngIf="runestone">
+
+  <div *ngIf="runestone.etching as etching" class="mb-4">
+
+    <strong>▣ Rune Etching</strong><br>
+    <br *ngIf="showDetails">
+
+    <ng-container *ngIf="showDetails">
+      This runestone creates a new Rune with the following properties:<br>
+    </ng-container>
+
+    <div class="row mt-4">
+      <div class="col-sm">
+
+        <table class="table table-borderless table-striped" [ngClass]="{ 'smaller-text': !showDetails }">
+          <tbody>
+
+            <tr>
+              <td>
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true" ngbTooltip="This field contains the name of the rune being etched. If this field is omitted, a reserved rune name is allocated.
+                  
+                  Names consist of the letters A through Z and are between one and twenty-six letters long."></fa-icon>
+                Name
+              </td>
+              <td>{{ etching.runeName === undefined ? 'None' : etching.runeName }}</td>
+            </tr>
+
+            <tr>
+              <td>
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true" ngbTooltip="The etcher of a rune may optionally allocate to themselves units of the rune being etched.
+                  This allocation is called a premine."></fa-icon>
+                Premined
+              </td>
+              <td [ngClass]="{ 'text-danger': etching.premine !== undefined }">{{ etching.premine === undefined ? 'None'
+                : etching.premine | divisibility:etching.divisibility }}</td>
+            </tr>
+
+            <tr>
+              <td>
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                  ngbTooltip="A rune's currency symbol is a single Unicode character, displayed after quantities of that rune.
+                  101 atomic units of a rune with divisibility 2 and symbol 🧿 would be rendered as 1.01 🧿."></fa-icon>
+                Symbol
+              </td>
+              <td>{{ etching.symbol === undefined ? 'None' : etching.symbol }}</td>
+            </tr>
+
+            <tr>
+              <td>
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true" ngbTooltip="Terms: A rune may have an open mint, allowing anyone to create and allocate units of that rune for themselves.
+                  An open mint is subject to terms, which are defined in this terms section."></fa-icon>
+                Mint rules
+              </td>
+              <td>
+
+                <ng-container *ngIf="!etching.terms">None</ng-container>
+
+                <table *ngIf="etching.terms as terms" class="table table-borderless"
+                  [ngClass]="{ 'smaller-text': !showDetails }">
+                  <tbody>
+
+                    <tr>
+                      <td>
+                        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                          ngbTooltip="Cap: The number of times a rune may be minted is its cap. A mint is closed once the cap is reached."></fa-icon>
+                        Max mints
+                      </td>
+                      <td>{{ terms.cap === undefined ? 'None' : terms.cap | bigIntFormatter }}</td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                          ngbTooltip="Amount: Each mint transaction creates this exact fixed amount of new units of a rune."></fa-icon>
+                        Runes per tx
+                      </td>
+                      <td>{{ terms.amount === undefined ? 'None' : terms.amount | divisibility:etching.divisibility }}
+                      </td>
+                    </tr>
+
+                    <!-- Height: This section contains the mint's starting and ending absolute block heights, respectively. -->
+                    <tr *ngIf="terms.height as height">
+                      <td>
+                        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                          ngbTooltip="Height Start: A mint is open starting in the block with the given start height."></fa-icon>
+                        Start at Block
+                      </td>
+                      <td>
+                        {{ height.start === undefined ? 'None' : height.start }}
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="terms.height as height">
+                      <td>
+                        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                          ngbTooltip="Height End: A rune may not be minted in or after the block with the given end height."></fa-icon>
+                        End at Block:
+                      </td>
+                      <td>
+                        {{ height.end === undefined ? 'None' : height.end }}
+                      </td>
+                    </tr>
+
+                    <!-- Offset: The section contains the mint's starting and ending block heights, relative to the block in which the etching is mined. -->
+                    <tr *ngIf="terms.offset as offset">
+                      <td>
+                        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                          ngbTooltip="Offset Start: A mint is open starting in the block whose height is equal to the start offset plus the height of the block in which the rune was etched."></fa-icon>
+                        Start at Block
+                      </td>
+                      <td>
+                        Etching block + {{ offset.start === undefined ? 'None' : offset.start }}
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="terms.offset as offset">
+                      <td>
+                        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                        ngbTooltip="A rune may not be minted in or after the block whose height is equal to the end offset plus the height of the block in which the rune was etched."></fa-icon>
+                        End at Block
+                      </td>
+                      <td>
+                        Etching block + {{ offset.end === undefined ? 'None' : offset.end }}
+                      </td>
+                    </tr>
+
+
+                  </tbody>
+                </table>
+
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true" ngbTooltip="The divisibility sets the smallest amount you can send.
+                  
+                  A rune with divisibility 0 may not be divided.
+                  A unit of a rune with divisibility 1 may be divided into ten sub-units,
+                  a rune with divisibility 2 may be divided into a hundred, and so on."></fa-icon>
+                Divisibility
+              </td>
+              <td>{{ etching.divisibility === undefined ? 0 : etching.divisibility }}</td>
+            </tr>
+
+            <tr *ngIf="etching.turbo">
+              <td>
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                  ngbTooltip="The 'Yes' setting means that this rune accepts all future protocol changes."></fa-icon>
+                Turbo
+              </td>
+              <td>{{ etching.turbo ? 'Yes' : 'No' }}</td>
+            </tr>
+
+          </tbody>
+        </table>
+
+      </div>
+      <div class="col-sm">
+        &nbsp;
+      </div>
+    </div>
+
+  </div>
+
+  <div *ngIf="runestone.mint as mint" class="mb-4">
+
+    <strong>▣ Rune Mint</strong><br>
+    <br *ngIf="showDetails">
+
+    <ng-container *ngIf="isUncommonGoods" class="mb-4">
+
+      <ng-container *ngIf="showDetails">
+        This runestone mints <strong>one unit</strong> of the hardcoded Rune #0.<br>
+      </ng-container>
+
+      <strong class="bitcoin">1x ⧉ UNCOMMON•GOODS</strong>
+
+    </ng-container>
+
+    <ng-container *ngIf="!isUncommonGoods" class="mb-4">
+
+      <ng-container *ngIf="showDetails">
+        This runestone mints new units of Rune
+        <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+          ngbTooltip="Runes are identified by IDs, which consist of the block in which a rune was etched and the index of the etching transaction within that block, represented in text as BLOCK:TX . 
+          This rune was etched in the {{ mint.tx | numberSuffix }} transaction of the {{ mint.block | numberSuffix }} block, so the ID is {{ mint.block }}:{{ mint.tx }}"></fa-icon>
+        {{ mint.block }}:{{ mint.tx }}.<br>
+      </ng-container>
+
+      @if (getRuneDetails(mint.block, mint.tx) | async; as runeDetails) {
+
+        {{ runeDetails.entry.terms.amount | divisibility:runeDetails.entry.divisibility }}x
+        <strong>
+          <app-runestone-id-to-link [runeId]="{ block: mint.block, tx: mint.tx }"/>
+        </strong>
+
+      } @else {
+        <span class="skeleton-loader"></span>
+      }
+    </ng-container>
+  </div>
+
+  <div *ngIf="runestone.edicts as edicts" class="mb-4">
+
+    <strong>▣ Rune Edicts</strong><br>
+    <br *ngIf="showDetails">
+
+    <ng-container *ngIf="showDetails">
+      This runestone customizes the output destination and amount of Runes transferred during the transaction.<br>
+    </ng-container>
+
+    <div class="row mt-4">
+      <div class="col-sm" [ngClass]="{ 'scrollable-table-container': !showDetails }">
+
+        <table class="table table-borderless table-striped" [ngClass]="{ 'smaller-text' : !showDetails }">
+          <tbody>
+
+            <tr>
+              <th>
+                Amount
+              </th>
+
+              <th>
+                Rune Name
+              </th>
+
+              <th *ngIf="showDetails">
+                <fa-icon [icon]="['fas', 'info-circle']" [fixedWidth]="true"
+                  ngbTooltip="Runes are identified by IDs, which consist of the block in which a rune was etched and the index of the etching transaction within that block, represented in text as BLOCK:TX ."></fa-icon>
+                Rune ID
+              </th>
+
+              <th *ngIf="showDetails">
+                Output
+              </th>
+
+            </tr>
+
+            <tr *ngFor="let edict of edicts">
+              <td>
+                @if (getRuneDetails(edict.id.block, edict.id.tx) | async; as runeDetails) {
+
+                  {{ edict.amount| divisibility:runeDetails.entry.divisibility }}
+
+                } @else {
+                <span class="skeleton-loader"></span>
+                }
+              </td>
+              <td>
+                <app-runestone-id-to-link [runeId]="{ block: edict.id.block, tx: edict.id.tx }"/>
+              </td>
+              <td *ngIf="showDetails">{{ edict.id.block }}:{{ edict.id.tx }}</td>
+              <td *ngIf="showDetails">
+                <a [routerLink]="['/tx/' | relativeUrl, transactionId]" fragment="flow=&vout={{ edict.output }}">
+                  {{ edict.output }}
+                </a>
+              </td>
+            </tr>
+
+
+          </tbody>
+        </table>
+
+      </div>
+      <div class="col-sm">
+        &nbsp;
+      </div>
+    </div>
+
+  </div>
+
+  <div *ngIf="runestone.pointer as pointer" class="mb-4">
+
+    <strong>▣ Rune Pointer
+      <a [routerLink]="['/tx/' | relativeUrl, transactionId]" fragment="flow=&vout={{ pointer }}">
+        to Output {{ pointer }}
+      </a>
+    </strong><br>
+    <br *ngIf="showDetails">
+
+    <ng-container *ngIf="showDetails">
+      This runestone contains the index of the output to which runes not assigned by edicts are to be transferred.<br>
+    </ng-container>
+
+  </div>
+
+</div>
+
+<div *ngIf="cenotaph">
+
+  <strong>▣ Cenotaph (Invalid Runestone message)</strong><br>
+  <br *ngIf="showDetails">
+
+  <ng-container *ngIf="showDetails">
+    This is a runestone message that is malformed.<br>
+    All Runes in this transaction are burned!<br>
+    <br>
+  </ng-container>
+
+  <strong>Flaws:</strong>
+  <ol class="pb-2 mt-2">
+    <li *ngFor="let flaw of cenotaph.flaws" class="pl-2">
+      {{ flaw.split('_').join(' ') }}
+    </li>
+  </ol>
+</div>

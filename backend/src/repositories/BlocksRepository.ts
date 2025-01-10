@@ -14,8 +14,9 @@ import chainTips from '../api/chain-tips';
 import blocks from '../api/blocks';
 import BlocksAuditsRepository from './BlocksAuditsRepository';
 import transactionUtils from '../api/transaction-utils';
+import OrdpoolBlocksRepository, { OrdpoolDatabaseBlock, ORDPOOL_BLOCK_DB_FIELDS } from '../repositories/OrdpoolBlocksRepository';
 
-interface DatabaseBlock {
+interface DatabaseBlock extends OrdpoolDatabaseBlock {
   id: string;
   height: number;
   version: number;
@@ -55,36 +56,6 @@ interface DatabaseBlock {
   utxoSetChange: number;
   utxoSetSize: number;
   totalInputAmt: number;
-
-  // HACK -- Ordpool stats
-  amountAtomical: number | null;
-  amountAtomicalMint: number | null;
-  amountAtomicalTransfer: number | null;
-  amountAtomcialUpdate: number | null;
-
-  amountCat21: number | null;
-  amountCat21Mint: number | null;
-  amountCat21Transfer: number | null;
-
-  amountInscription: number | null;
-  amountInscriptionMint: number | null;
-  amountInscriptionTransfer: number | null;
-  amountInscriptionBurn: number | null;
-
-  amountRunestone: number | null;
-  amountRunestoneEtch: number | null;
-  amountRunestoneTransfer: number | null;
-  amountRunestoneBurn: number | null;
-
-  amountBrc20: number | null;
-  amountBrc20Deploy: number | null;
-  amountBrc20Mint: number | null;
-  amountBrc20Transfer: number | null;
-
-  amountSrc20: number | null;
-  amountSrc20Deploy: number | null;
-  amountSrc20Mint: number | null;
-  amountSrc20Transfer: number | null;
 }
 
 const BLOCK_DB_FIELDS = `
@@ -126,38 +97,8 @@ const BLOCK_DB_FIELDS = `
   blocks.header,
   blocks.utxoset_change AS utxoSetChange,
   blocks.utxoset_size AS utxoSetSize,
-  blocks.total_input_amt AS totalInputAmt,
-
-  /* HACK -- Ordpool stats */
-  blocks.amount_atomical              AS amountAtomical,
-  blocks.amount_atomical_mint         AS amountAtomicalMint,
-  blocks.amount_atomical_transfer     AS amountAtomicalTransfer,
-  blocks.amount_atomcial_update       AS amountAtomcialUpdate,
-
-  blocks.amount_cat21                 AS amountCat21,
-  blocks.amount_cat21_mint            AS amountCat21Mint,
-  blocks.amount_cat21_transfer        AS amountCat21Transfer,
-
-  blocks.amount_inscription           AS amountInscription,
-  blocks.amount_inscription_mint      AS amountInscriptionMint,
-  blocks.amount_inscription_transfer  AS amountInscriptionTransfer,
-  blocks.amount_inscription_burn      AS amountInscriptionBurn,
-
-  blocks.amount_runestone             AS amountRunestone,
-  blocks.amount_rune_etch             AS amountRunestoneEtch,
-  blocks.amount_rune_transfer         AS amountRunestoneTransfer,
-  blocks.amount_rune_burn             AS amountRunestoneBurn,
-
-  blocks.amount_brc20                 AS amountBrc20,
-  blocks.amount_brc20_deploy          AS amountBrc20Deploy,
-  blocks.amount_brc20_mint            AS amountBrc20Mint,
-  blocks.amount_brc20_transfer        AS amountBrc20Transfer,
-
-  blocks.amount_src20                 AS amountSrc20,
-  blocks.amount_src20_deploy          AS amountSrc20Deploy,
-  blocks.amount_src20_mint            AS amountSrc20Mint,
-  blocks.amount_src20_transfer        AS amountSrc20Transfer
-`;
+  blocks.total_input_amt AS totalInputAmt
+  , ${ ORDPOOL_BLOCK_DB_FIELDS }`;
 
 
 class BlocksRepository {
@@ -167,6 +108,10 @@ class BlocksRepository {
   public async $saveBlockInDatabase(block: BlockExtended) {
     const truncatedCoinbaseSignature = block?.extras?.coinbaseSignature?.substring(0, 500);
     const truncatedCoinbaseSignatureAscii = block?.extras?.coinbaseSignatureAscii?.substring(0, 500);
+
+    // HACK -- Ordpool Stats
+    // storing ordpool stats before storing to the `blocks` table, ER_DUP_ENTRY could occur, but that would also skip our code
+    await OrdpoolBlocksRepository.saveBlockOrdpoolStatsInDatabase(block);
 
     try {
       const query = `INSERT INTO blocks(
@@ -179,33 +124,7 @@ class BlocksRepository {
         coinbase_signature, utxoset_size,        utxoset_change,    avg_tx_size,
         total_inputs,       total_outputs,       total_input_amt,   total_output_amt,
         fee_percentiles,    segwit_total_txs,    segwit_total_size, segwit_total_weight,
-        median_fee_amt,     coinbase_signature_ascii,
-
-        /* HACK -- Ordpool Stats */
-        amount_atomical,
-        amount_atomical_mint,
-        amount_atomical_transfer,
-        amount_atomcial_update,
-        amount_cat21,
-        amount_cat21_mint,
-        amount_cat21_transfer,
-        amount_inscription,
-        amount_inscription_mint,
-        amount_inscription_transfer,
-        amount_inscription_burn,
-        amount_runestone,
-        amount_rune_etch,
-        amount_rune_transfer,
-        amount_rune_burn,
-        amount_brc20,
-        amount_brc20_deploy,
-        amount_brc20_mint,
-        amount_brc20_transfer,
-        amount_src20,
-        amount_src20_deploy,
-        amount_src20_mint,
-        amount_src20_transfer
-
+        median_fee_amt,     coinbase_signature_ascii
       ) VALUE (
         ?, ?, FROM_UNIXTIME(?), ?,
         ?, ?, ?, ?,
@@ -216,32 +135,7 @@ class BlocksRepository {
         ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?,
-        ?, ?,
-
-        /* HACK -- Ordpool Stats */
-        ?, /* amount_atomical */
-        ?, /* amount_atomical_mint */
-        ?, /* amount_atomical_transfer */
-        ?, /* amount_atomcial_update */
-        ?, /* amount_cat21 */
-        ?, /* amount_cat21_mint */
-        ?, /* amount_cat21_transfer */
-        ?, /* amount_inscription */
-        ?, /* amount_inscription_mint */
-        ?, /* amount_inscription_transfer */
-        ?, /* amount_inscription_burn */
-        ?, /* amount_runestone */
-        ?, /* amount_rune_etch */
-        ?, /* amount_rune_transfer */
-        ?, /* amount_rune_burn */
-        ?, /* amount_brc20 */
-        ?, /* amount_brc20_deploy */
-        ?, /* amount_brc20_mint */
-        ?, /* amount_brc20_transfer */
-        ?, /* amount_src20 */
-        ?, /* amount_src20_deploy */
-        ?, /* amount_src20_mint */
-        ?  /* amount_src20_transfer */
+        ?, ?
       )`;
 
       const poolDbId = await PoolsRepository.$getPoolByUniqueId(block.extras.pool.id);
@@ -287,39 +181,10 @@ class BlocksRepository {
         block.extras.segwitTotalWeight,
         block.extras.medianFeeAmt,
         truncatedCoinbaseSignatureAscii,
-
-        // HACK -- Ordpool Stats
-        block.extras.ordpoolStats.amount.atomical,
-        block.extras.ordpoolStats.amount.atomicalMint,
-        block.extras.ordpoolStats.amount.atomicalTransfer,
-        block.extras.ordpoolStats.amount.atomcialUpdate,
-
-        block.extras.ordpoolStats.amount.cat21,
-        block.extras.ordpoolStats.amount.cat21Mint,
-        block.extras.ordpoolStats.amount.cat21Transfer,
-
-        block.extras.ordpoolStats.amount.inscription,
-        block.extras.ordpoolStats.amount.inscriptionMint,
-        block.extras.ordpoolStats.amount.inscriptionTransfer,
-        block.extras.ordpoolStats.amount.inscriptionBurn,
-
-        block.extras.ordpoolStats.amount.rune,
-        block.extras.ordpoolStats.amount.runeEtch,
-        block.extras.ordpoolStats.amount.runeTransfer,
-        block.extras.ordpoolStats.amount.runeBurn,
-
-        block.extras.ordpoolStats.amount.brc20,
-        block.extras.ordpoolStats.amount.brc20Deploy,
-        block.extras.ordpoolStats.amount.brc20Mint,
-        block.extras.ordpoolStats.amount.brc20Transfer,
-
-        block.extras.ordpoolStats.amount.src20,
-        block.extras.ordpoolStats.amount.src20Deploy,
-        block.extras.ordpoolStats.amount.src20Mint,
-        block.extras.ordpoolStats.amount.src20Transfer
       ];
 
-      await DB.query(query, params);
+      await DB.query(query, params, 'silent');
+
     } catch (e: any) {
       if (e.errno === 1062) { // ER_DUP_ENTRY - This scenario is possible upon node backend restart
         logger.debug(`$saveBlockInDatabase() - Block ${block.height} has already been indexed, ignoring`, logger.tags.mining);
@@ -628,7 +493,23 @@ class BlocksRepository {
       SELECT ${BLOCK_DB_FIELDS}
       FROM blocks
       JOIN pools ON blocks.pool_id = pools.id
-      WHERE pool_id = ?`;
+
+      -- HACK -- Ordpool Stats
+      LEFT JOIN ordpool_stats ON blocks.hash = ordpool_stats.hash
+
+      -- HACK -- Ordpool Stats Mint Activity Tables
+      LEFT JOIN ordpool_stats_rune_mint    rune_mint    ON rune_mint.hash  = blocks.hash
+      LEFT JOIN ordpool_stats_brc20_mint   brc20_mint   ON brc20_mint.hash = blocks.hash
+      LEFT JOIN ordpool_stats_src20_mint   src20_mint   ON src20_mint.hash = blocks.hash
+      LEFT JOIN ordpool_stats_cat21_mint   cat21_mint   ON cat21_mint.hash = blocks.hash
+
+      -- HACK -- Ordpool Stats Etch/Deploy Tables
+      LEFT JOIN ordpool_stats_rune_etch    rune_etch    ON rune_etch.hash    = blocks.hash
+      LEFT JOIN ordpool_stats_brc20_deploy brc20_deploy ON brc20_deploy.hash = blocks.hash
+      LEFT JOIN ordpool_stats_src20_deploy src20_deploy ON src20_deploy.hash = blocks.hash
+
+      WHERE pool_id = ?
+      GROUP BY blocks.hash -- to combine activity rows`;
     params.push(pool.id);
 
     if (startHeight !== undefined) {
@@ -663,7 +544,23 @@ class BlocksRepository {
         SELECT ${BLOCK_DB_FIELDS}
         FROM blocks
         JOIN pools ON blocks.pool_id = pools.id
-        WHERE blocks.height = ?`,
+
+        -- HACK -- Ordpool Stats
+        LEFT JOIN ordpool_stats ON blocks.hash = ordpool_stats.hash
+
+        -- HACK -- Ordpool Stats Mint Activity Tables
+        LEFT JOIN ordpool_stats_rune_mint    rune_mint    ON rune_mint.hash  = blocks.hash
+        LEFT JOIN ordpool_stats_brc20_mint   brc20_mint   ON brc20_mint.hash = blocks.hash
+        LEFT JOIN ordpool_stats_src20_mint   src20_mint   ON src20_mint.hash = blocks.hash
+        LEFT JOIN ordpool_stats_cat21_mint   cat21_mint   ON cat21_mint.hash = blocks.hash
+
+        -- HACK -- Ordpool Stats Etch/Deploy Tables
+        LEFT JOIN ordpool_stats_rune_etch    rune_etch    ON rune_etch.hash    = blocks.hash
+        LEFT JOIN ordpool_stats_brc20_deploy brc20_deploy ON brc20_deploy.hash = blocks.hash
+        LEFT JOIN ordpool_stats_src20_deploy src20_deploy ON src20_deploy.hash = blocks.hash
+
+        WHERE blocks.height = ?
+        GROUP BY blocks.hash -- to combine activity rows`,
         [height]
       );
 
@@ -1187,7 +1084,7 @@ class BlocksRepository {
         let summaryVersion = 0;
         if (config.MEMPOOL.BACKEND === 'esplora') {
           const txs = (await bitcoinApi.$getTxsForBlock(dbBlk.id)).map(tx => transactionUtils.extendTransaction(tx));
-          summary = blocks.summarizeBlockTransactions(dbBlk.id, txs);
+          summary = await blocks.summarizeBlockTransactions(dbBlk.id, txs);
           summaryVersion = 1;
         } else {
           // Call Core RPC
@@ -1205,38 +1102,7 @@ class BlocksRepository {
     }
 
     // HACK -- Ordpool Stats
-    extras.ordpoolStats = {
-      amount: {
-        atomical:             dbBlk.amountAtomical,
-        atomicalMint:         dbBlk.amountAtomicalMint,
-        atomicalTransfer:     dbBlk.amountAtomicalTransfer,
-        atomcialUpdate:       dbBlk.amountAtomcialUpdate,
-
-        cat21:                dbBlk.amountCat21,
-        cat21Mint:            dbBlk.amountCat21Mint,
-        cat21Transfer:        dbBlk.amountCat21Transfer,
-
-        inscription:          dbBlk.amountInscription,
-        inscriptionMint:      dbBlk.amountInscriptionMint,
-        inscriptionTransfer:  dbBlk.amountInscriptionTransfer,
-        inscriptionBurn:      dbBlk.amountInscriptionBurn,
-
-        rune:                 dbBlk.amountRunestone,
-        runeEtch:             dbBlk.amountRunestoneEtch,
-        runeTransfer:         dbBlk.amountRunestoneTransfer,
-        runeBurn:             dbBlk.amountRunestoneBurn,
-
-        brc20:                dbBlk.amountBrc20,
-        brc20Deploy:          dbBlk.amountBrc20Deploy,
-        brc20Mint:            dbBlk.amountBrc20Mint,
-        brc20Transfer:        dbBlk.amountBrc20Transfer,
-
-        src20:                dbBlk.amountSrc20,
-        src20Deploy:          dbBlk.amountSrc20Deploy,
-        src20Mint:            dbBlk.amountSrc20Mint,
-        src20Transfer:        dbBlk.amountSrc20Transfer
-      }
-    }
+    extras.ordpoolStats = OrdpoolBlocksRepository.formatDbBlockIntoOrdpoolStats(dbBlk);
 
     blk.extras = <BlockExtension>extras;
     return <BlockExtended>blk;

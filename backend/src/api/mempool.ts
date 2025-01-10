@@ -116,7 +116,7 @@ class Mempool {
       if (config.MEMPOOL.CACHE_ENABLED && config.REDIS.ENABLED) {
         await redisCache.$addTransaction(this.mempoolCache[txid]);
       }
-      this.mempoolCache[txid].flags = Common.getTransactionFlags(this.mempoolCache[txid]);
+      this.mempoolCache[txid].flags = await Common.getTransactionFlags(this.mempoolCache[txid]);
       this.mempoolCache[txid].cpfpChecked = false;
       this.mempoolCache[txid].cpfpDirty = true;
       this.mempoolCache[txid].cpfpUpdated = undefined;
@@ -152,6 +152,7 @@ class Mempool {
             }
             count++;
           }
+          // HACK: improved logging
           const percentage = ((count / expectedCount) * 100).toFixed(2);
           logger.info(`Fetched ${count} of ${expectedCount} mempool transactions from esplora (${percentage}% done)`);
           if (result.length > 0) {

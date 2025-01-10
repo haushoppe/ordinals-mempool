@@ -30,6 +30,10 @@ import redisCache from './redis-cache';
 import rbfCache from './rbf-cache';
 import { calcBitsDifference } from './difficulty-adjustment';
 import AccelerationRepository from '../repositories/AccelerationRepository';
+import { DigitalArtifactAnalyserService, getFirstInscriptionHeight } from 'ordpool-parser';
+
+// const debugBlock = 839999;
+const debugBlock = null;
 
 class Blocks {
   private blocks: BlockExtended[] = [];
@@ -215,10 +219,10 @@ class Blocks {
     };
   }
 
-  public summarizeBlockTransactions(hash: string, transactions: TransactionExtended[]): BlockSummary {
+  public async summarizeBlockTransactions(hash: string, transactions: TransactionExtended[]): Promise<BlockSummary> {
     return {
       id: hash,
-      transactions: Common.classifyTransactions(transactions),
+      transactions: await Common.classifyTransactions(transactions),
     };
   }
 
@@ -352,38 +356,24 @@ class Blocks {
       }
 
       // HACK -- Ordpool stats
-      extras.ordpoolStats = {
-        amount: {
-          atomical: null,
-          atomicalMint: null,
-          atomicalTransfer: null,
-          atomcialUpdate: null,
+      if (block.height >= getFirstInscriptionHeight(config.MEMPOOL.NETWORK) && transactions?.length > 1) {
 
-          cat21: null,
-          cat21Mint: null,
-          cat21Transfer: null,
+        // This is the most important part of the Ordpool statistics,
+        // we will do a deep analysis against all supported protocols.
 
-          inscription: null,
-          inscriptionMint: null,
-          inscriptionTransfer: null,
-          inscriptionBurn: null,
-
-          rune: null,
-          runeEtch: null,
-          runeTransfer: null,
-          runeBurn: null,
-
-          brc20: null,
-          brc20Deploy: null,
-          brc20Mint: null,
-          brc20Transfer: null,
-
-          src20: null,
-          src20Deploy: null,
-          src20Mint: null,
-          src20Transfer: null,
+        if (debugBlock) {
+          // save to file
+          const formattedJson = JSON.stringify(transactions, null, 2);
+          const filePath = `${__dirname}/../../../../ordpool-parser/testdata/block_${block.height}_txns.json`;
+          require('fs').writeFile(filePath, formattedJson, (err) => {
+            if (err) {throw err;}
+            logger.warn(`block_${block.height}_txns.json written. exiting`);
+            process.exit(1);
+          });
         }
-      };
+
+        extras.ordpoolStats = await DigitalArtifactAnalyserService.analyseTransactions(transactions);
+      }
     }
 
     blk.extras = <BlockExtension>extras;
@@ -659,7 +649,7 @@ class Blocks {
           // add CPFP
           const cpfpSummary = Common.calculateCpfp(height, txs, true);
           // classify
-          const { transactions: classifiedTxs } = this.summarizeBlockTransactions(blockHash, cpfpSummary.transactions);
+          const { transactions: classifiedTxs } = await this.summarizeBlockTransactions(blockHash, cpfpSummary.transactions);
           await BlocksSummariesRepository.$saveTransactions(height, blockHash, classifiedTxs, 1);
           await Common.sleep$(250);
         }
@@ -688,7 +678,7 @@ class Blocks {
             }
             const cpfpSummary = Common.calculateCpfp(height, templateTxs?.filter(tx => tx['effectiveFeePerVsize'] != null) as TransactionExtended[], true);
             // classify
-            const { transactions: classifiedTxs } = this.summarizeBlockTransactions(blockHash, cpfpSummary.transactions);
+            const { transactions: classifiedTxs } = await this.summarizeBlockTransactions(blockHash, cpfpSummary.transactions);
             const classifiedTxMap: { [txid: string]: TransactionClassified } = {};
             for (const tx of classifiedTxs) {
               classifiedTxMap[tx.txid] = tx;
@@ -868,6 +858,7 @@ class Blocks {
     }
 
     while (this.currentBlockHeight < blockHeightTip) {
+
       if (this.currentBlockHeight === 0) {
         this.currentBlockHeight = blockHeightTip;
       } else {
@@ -878,6 +869,11 @@ class Blocks {
           this.updateTimerProgress(timer, `getting orphaned blocks for ${this.currentBlockHeight}`);
           await chainTips.updateOrphanedBlocks();
         }
+      }
+
+      if (debugBlock) {
+        // HACK: force a given block for debugging reasons
+        this.currentBlockHeight = debugBlock;
       }
 
       this.updateTimerProgress(timer, `getting block data for ${this.currentBlockHeight}`);
@@ -896,7 +892,7 @@ class Blocks {
 
       const cpfpSummary: CpfpSummary = Common.calculateCpfp(block.height, transactions);
       const blockExtended: BlockExtended = await this.$getBlockExtended(block, cpfpSummary.transactions);
-      const blockSummary: BlockSummary = this.summarizeBlockTransactions(block.id, cpfpSummary.transactions);
+      const blockSummary: BlockSummary = await this.summarizeBlockTransactions(block.id, cpfpSummary.transactions);
       this.updateTimerProgress(timer, `got block data for ${this.currentBlockHeight}`);
 
       if (Common.indexingEnabled()) {
@@ -1150,10 +1146,10 @@ class Blocks {
     if (cpfpSummary && !Common.isLiquid()) {
       summary = {
         id: hash,
-        transactions: cpfpSummary.transactions.map(tx => {
+        transactions: await Promise.all(cpfpSummary.transactions.map(async tx => {
           let flags: number = 0;
           try {
-            flags = tx.flags || Common.getTransactionFlags(tx);
+            flags = tx.flags || await Common.getTransactionFlags(tx);
           } catch (e) {
             logger.warn('Failed to classify transaction: ' + (e instanceof Error ? e.message : e));
           }
@@ -1166,13 +1162,13 @@ class Blocks {
             rate: tx.effectiveFeePerVsize,
             flags: flags,
           };
-        }),
+        })),
       };
       summaryVersion = 1;
     } else {
       if (config.MEMPOOL.BACKEND === 'esplora') {
         const txs = (await bitcoinApi.$getTxsForBlock(hash)).map(tx => transactionUtils.extendTransaction(tx));
-        summary = this.summarizeBlockTransactions(hash, txs);
+        summary = await this.summarizeBlockTransactions(hash, txs);
         summaryVersion = 1;
       } else {
         // Call Core RPC
@@ -1307,7 +1303,7 @@ class Blocks {
           let summaryVersion = 0;
           if (config.MEMPOOL.BACKEND === 'esplora') {
             const txs = (await bitcoinApi.$getTxsForBlock(cleanBlock.hash)).map(tx => transactionUtils.extendTransaction(tx));
-            summary = this.summarizeBlockTransactions(cleanBlock.hash, txs);
+            summary = await this.summarizeBlockTransactions(cleanBlock.hash, txs);
             summaryVersion = 1;
           } else {
             // Call Core RPC

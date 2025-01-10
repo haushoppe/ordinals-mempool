@@ -1,0 +1,79 @@
+@if(statistics$ | async; as statistics) {
+
+<div class="mb-3 d-flex menu">
+
+  <a routerLinkActive="active" class="btn btn-primary w-33" [routerLink]="['/ordpool-stats' | relativeUrl, 'mints', statistics.interval, statistics.aggregation]">Mints</a>
+  <a routerLinkActive="active" class="btn btn-primary w-33" [routerLink]="['/ordpool-stats' | relativeUrl, 'new-tokens', statistics.interval, statistics.aggregation]">New Tokens</a>
+  <a routerLinkActive="active" class="btn btn-primary w-33" [routerLink]="['/ordpool-stats' | relativeUrl, 'fees', statistics.interval, statistics.aggregation]">Fees</a>
+  <a routerLinkActive="active" class="btn btn-primary w-33" [routerLink]="['/ordpool-stats' | relativeUrl, 'inscription-sizes', statistics.interval, statistics.aggregation]">Inscription Sizes</a>
+
+</div>
+
+<div class="container-graph">
+  <div>
+    <div>
+      <div class="card mb-3">
+        
+        <div class="card-header">
+          <div class="d-flex d-md-block align-items-baseline">
+            Ordpool Stats: <strong class="bitcoin">{{ statistics.heading }}</strong>
+            @if(loading) {
+              <div style="position: relative; top: 2px" class="spinner-border text-light bootstrap-spinner"></div>
+            }
+          </div>
+
+          <div class="formRadioGroup no-menu">
+            <div class="btn-toggle-rows">
+              <div class="btn-group btn-group-toggle">
+                @for(interval of ['1h', '24h', '1w', '1m', '3m', '6m', '1y', '2y', '3y', '4y']; track $index) {
+                      <a [routerLink]="['/ordpool-stats' | relativeUrl, statistics.type, interval, statistics.aggregation]" 
+                        routerLinkActive="active"
+                        class="btn btn-primary btn-sm" 
+                      >{{ interval | uppercase }}</a>
+                    }
+              </div>
+            </div>
+
+            <div class="small-buttons">
+              <div ngbDropdown #myDrop="ngbDropdown">
+                <button class="btn btn btn-primary btn-sm" id="dropdownAggregation" ngbDropdownAnchor
+                  (click)="myDrop.toggle()">
+                  <fa-icon [icon]="['fas', 'filter']" [fixedWidth]="true" title="Aggregate Data"></fa-icon>
+                </button>
+                <div class="dropdown-aggregation" ngbDropdownMenu aria-labelledby="dropdownAggregation">
+                  <ul>
+                    @for(aggregation of ['block', 'hour', 'day']; track $index) {
+                      <li routerLinkActive="active">
+                        <a [routerLink]="['/ordpool-stats' | relativeUrl, statistics.type, statistics.interval, aggregation]">{{ aggregation| uppercase }}</a>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+
+          @if (statistics$ | async; as statistics) {
+            
+            <div class="chart" 
+              *browserOnly echarts 
+              [initOpts]="chartInitOptions" 
+              [options]="getChartOptions(statistics.type, statistics.stats)"
+              (chartInit)="onChartInit($event)">
+            </div>
+          }
+
+          <p class="w-50 m-auto pt-5">
+            {{ statistics.description }}
+          </p>
+            
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+}

@@ -1,0 +1,18 @@
+@if (previewInstructions$ | async; as previewInstructions) {
+  @if (previewInstructions.renderDirectly) {
+    <iframe
+      [src]="'/preview/' + previewInstructions.instructionsFor | safeResourceUrl"
+      sandbox="allow-scripts" 
+      scrolling="no" 
+      loading="lazy"
+    ></iframe>
+
+  } @else {
+    <iframe
+      [srcdoc]="previewInstructions.previewContent | safeHtml"
+      sandbox="allow-scripts" 
+      scrolling="no" 
+      loading="lazy"
+    ></iframe>
+  }
+}

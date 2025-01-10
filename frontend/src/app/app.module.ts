@@ -34,6 +34,8 @@ import { InscriptionAcceleratorApiService } from './services/ordinals/inscriptio
 import { WalletService } from './services/ordinals/wallet.service';
 import { BlockstreamApiService } from './services/ordinals/blockstream-api.service';
 import { Cat21Service } from './services/ordinals/cat21.service';
+import { OrdpoolStatsComponent } from './components/_ordpool/ordpool-stats/ordpool-stats.component';
+
 
 import { HIGHLIGHT_OPTIONS } from 'ngx-highlightjs';
 
@@ -89,6 +91,8 @@ const providers = [
     HttpClientModule,
     BrowserAnimationsModule,
     SharedModule,
+    
+    OrdpoolStatsComponent
   ],
   providers: providers,
   bootstrap: [AppComponent]

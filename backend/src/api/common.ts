@@ -8,7 +8,7 @@ import transactionUtils from './transaction-utils';
 import { isPoint } from '../utils/secp256k1';
 import logger from '../logger';
 import { getVarIntLength, opcodes, parseMultisigScript } from '../utils/bitcoin-script';
-import { InscriptionParserService, AtomicalParserService, Cat21ParserService, Src20ParserService, RuneParserService } from 'ordpool-parser';
+import { DigitalArtifactAnalyserService } from 'ordpool-parser';
 
 // Bitcoin Core default policy settings
 const TX_MAX_STANDARD_VERSION = 2;
@@ -390,9 +390,9 @@ export class Common {
   }
 
   // HACK - WARNING
-  // THIS METHOD was just duplicated between frontend/backend and is super redundant!
-  // nearly the same code exists in frontend/src/app/shared/transaction.utils.ts
-  static getTransactionFlags(tx: TransactionExtended): number {
+  // THIS METHOD is duplicated between frontend/backend
+  // similar code exists in frontend/src/app/shared/transaction.utils.ts, keep them in sync!
+  static async getTransactionFlags(tx: TransactionExtended): Promise<number> {
     let flags = tx.flags ? BigInt(tx.flags) : 0n;
 
     // Update variable flags (CPFP, RBF)
@@ -543,46 +543,16 @@ export class Common {
       flags |= TransactionFlags.nonstandard;
     }
 
-    const debug = false;
-
-    // HACK -- add Ordpool flags
-    // keep this in sync with frontend/src/app/shared/transaction.utils.ts
-    if (AtomicalParserService.hasAtomical(tx)) {
-      flags |= TransactionFlags.ordpool_atomical;
-      if (debug) { logger.debug(tx.txid, 'flagged as atomical'); }
-    }
-
-    if (Cat21ParserService.hasCat21(tx)) {
-      flags |= TransactionFlags.ordpool_cat21;
-      if (debug) { logger.debug(tx.txid, 'flagged as CAT-21'); }
-    }
-
-    if (InscriptionParserService.hasInscription(tx)) {
-      flags |= TransactionFlags.ordpool_inscription;
-      if (debug) { logger.debug(tx.txid, 'flagged as inscription'); }
-    }
-
-    if (RuneParserService.hasRunestone(tx)) {
-      flags |= TransactionFlags.ordpool_rune;
-      if (debug) { logger.debug(tx.txid, 'flagged as runestone'); }
-    }
-
-    if (Src20ParserService.hasSrc20(tx)) {
-      flags |= TransactionFlags.ordpool_src20;
-      if (debug) { logger.debug(tx.txid, 'flagged as SRC-20'); }
-    }
-
-    // Test to make sure that large numbers don't cause issues when sent to frontend
-    // --> seems to work fine so far! :-)
-    // flags |= TransactionFlags.test_large_numbers;
+    // HACK --- Ordpool Flags
+    flags = await DigitalArtifactAnalyserService.analyseTransaction(tx, flags);
 
     return Number(flags);
   }
 
-  static classifyTransaction(tx: TransactionExtended): TransactionClassified {
+  static async classifyTransaction(tx: TransactionExtended): Promise<TransactionClassified> {
     let flags = 0;
     try {
-      flags = Common.getTransactionFlags(tx);
+      flags = await Common.getTransactionFlags(tx);
     } catch (e) {
       logger.warn('Failed to add classification flags to transaction: ' + (e instanceof Error ? e.message : e));
     }
@@ -593,8 +563,14 @@ export class Common {
     };
   }
 
+  /*
+  // BEFORE
   static classifyTransactions(txs: TransactionExtended[]): TransactionClassified[] {
     return txs.map(Common.classifyTransaction);
+  }
+  */
+  static async classifyTransactions(txs: TransactionExtended[]): Promise<TransactionClassified[]> {
+    return Promise.all(txs.map(tx => Common.classifyTransaction(tx)));
   }
 
   static stripTransaction(tx: TransactionExtended): TransactionStripped {

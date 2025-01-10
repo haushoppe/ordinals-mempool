@@ -37,7 +37,18 @@
   <div class="box" *ngIf="!error">
     <div class="row">
       <div class="col-sm">
-        <table class="table table-borderless table-striped">
+
+        <!-- <table class="table table-borderless table-striped"> -->
+        <table class="table table-borderless table-striped table-dark">
+          
+          <!-- HACK: START Ordpool Stats -->
+          <app-block-ordpool-stats 
+            [ordpoolStats]="block?.extras?.ordpoolStats"
+            [blockId]="block?.id"
+            [showSkeleton]="block && !isLoadingBlock"
+            [blockConversion]="blockConversion" />
+          <!-- HACK: END Ordpool Stats -->
+
           <tbody>
             <ng-container *ngIf="block && !isLoadingBlock; else skeletonRows">
               <tr>

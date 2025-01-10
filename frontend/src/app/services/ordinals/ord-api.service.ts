@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable, of, tap } from 'rxjs';
+import { Observable, of, shareReplay, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { WalletService } from './wallet.service';
@@ -115,5 +115,60 @@ export class OrdApiService {
         this.runeCache.set(cacheKey, { timestamp: now, rune });
       })
     );
+  }
+
+  private runeDetailsMap: Map<string, Observable<OrdApiRune>> = new Map();
+
+  /**
+   * Retrieves rune details by block height and transaction number.
+   * Caches the result and shares the observable among multiple subscribers.
+   * 
+   * The observable is cached and shared among subscribers using shareReplay,
+   * ensuring that multiple requests for the same rune do not result in multiple API calls.
+   *
+   * @param block The height of the Bitcoin block.
+   * @param tx The number of the transaction within that block.
+   * @returns An observable containing the rune details.
+   */
+  getRuneDetails(block: number | bigint, tx: number): Observable<OrdApiRune> {
+    const key = `${block}:${tx}`;
+    
+    if (this.runeDetailsMap.has(key)) {
+      return this.runeDetailsMap.get(key);
+    } else {
+      const runeDetails$ = this.getRuneById(Number(block), tx).pipe(
+        shareReplay({
+          refCount: true,
+          bufferSize: 1
+        })
+      );
+      this.runeDetailsMap.set(key, runeDetails$);
+      return runeDetails$;
+    }
+  }
+
+  static splitRuneId(id : { block: number | bigint, tx: number} | string) : { 
+    block: number | bigint;
+    tx: number;
+  } {
+
+    let block : number | bigint;
+    let tx : number;
+
+    if (typeof(id) === 'string') {
+      const splitted = id.split(':');
+      block = parseInt(splitted[0] , 10);
+      tx = parseInt(splitted[1] , 10);
+    } else {
+      block = id.block;
+      tx = id.tx;
+    }
+
+    return { block, tx };
+  }
+
+  static isUncommonGoods(block: number | bigint | undefined, tx: number | undefined) {
+    return (block === 1n && tx === 0) || 
+           (block === 1 && tx === 0);
   }
 }

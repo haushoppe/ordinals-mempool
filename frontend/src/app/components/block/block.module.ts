@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { Routes, RouterModule } from '@angular/router';
 import { BlockComponent } from './block.component';
 import { SharedModule } from '../../shared/shared.module';
+import { MiniInscriptionViewerComponent } from '../_ordpool/digital-artifact-viewer/inscription-viewer/mini-inscription-viewer.component';
+import { BlockOrdpoolStatsComponent } from '../_ordpool/ordpool-stats/block-ordpool-stats.component';
+
 
 const routes: Routes = [
   {
@@ -29,9 +32,11 @@ export class BlockRoutingModule { }
     CommonModule,
     BlockRoutingModule,
     SharedModule,
+    MiniInscriptionViewerComponent,
+    BlockOrdpoolStatsComponent
   ],
   declarations: [
-    BlockComponent,
+    BlockComponent
   ]
 })
 export class BlockModule { }

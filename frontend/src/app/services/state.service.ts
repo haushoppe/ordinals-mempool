@@ -186,12 +186,12 @@ export class StateService {
   activeGoggles$: BehaviorSubject<ActiveFilter> = new BehaviorSubject({ 
     mode: 'or', 
     filters: [
-      'ordpool_atomical',
+      // 'ordpool_atomical',
       'ordpool_cat21',
       'ordpool_inscription',
       'ordpool_rune',
-      'ordpool_src20',
-      // 'test_large_numbers'
+      'ordpool_brc20',
+      'ordpool_src20'
     ], 
     gradient: 'fee'
   });
@@ -315,8 +315,13 @@ export class StateService {
     const rateUnitPreference = this.storageService.getValue('rate-unit-preference');
     this.rateUnits$ = new BehaviorSubject<string>(rateUnitPreference || 'vb');
 
+    // HACK: force display mode to `size`
+    /*
     const blockDisplayModePreference = this.storageService.getValue('block-display-mode-preference');
     this.blockDisplayMode$ = new BehaviorSubject<string>(blockDisplayModePreference || 'fees');
+    */
+    this.blockDisplayMode$ = new BehaviorSubject<string>('size');
+
 
     const viewAmountModePreference = this.storageService.getValue('view-amount-mode') as 'btc' | 'sats' | 'fiat';
     this.viewAmountMode$ = new BehaviorSubject<'btc' | 'sats' | 'fiat'>(viewAmountModePreference || 'btc');

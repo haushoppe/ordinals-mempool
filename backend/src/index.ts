@@ -47,6 +47,11 @@ import bitcoinSecondClient from './api/bitcoin/bitcoin-second-client';
 import accelerationRoutes from './api/acceleration/acceleration.routes';
 import aboutRoutes from './api/about.routes';
 
+import generalOrdpoolRoutes from './api/explorer/_ordpool/ordpool.routes';
+import ordpoolIndexer from './ordpool-indexer';
+
+
+
 class Server {
   private wss: WebSocket.Server | undefined;
   private wssUnixSocket: WebSocket.Server | undefined;
@@ -236,6 +241,8 @@ class Server {
         await memPool.$updateMempool(newMempool, newAccelerations, minFeeMempool, minFeeTip, pollRate);
       }
       indexer.$run();
+      await ordpoolIndexer.run();
+
       if (config.FIAT_PRICE.ENABLED) {
         priceUpdater.$run();
       }
@@ -334,6 +341,8 @@ class Server {
       accelerationRoutes.initRoutes(this.app);
     }
     aboutRoutes.initRoutes(this.app);
+
+    generalOrdpoolRoutes.initRoutes(this.app);
   }
 
   healthCheck(): void {
