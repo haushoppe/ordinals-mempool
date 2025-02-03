@@ -120,7 +120,9 @@ export class Cat21MintComponent implements OnInit {
               BigInt(0)
             );
 
-            const transactionFee = BigInt(simulation1.vsize * feeRate);
+            // Since feeRate no longer has to be an integer, we can also have floating point numbers here
+            const transactionFeeFloating = simulation1.vsize * feeRate;
+            const transactionFee = BigInt(Math.ceil(transactionFeeFloating));
 
             // simulate the transaction again, with exact transactionFee
             const simulation2 = this.cat21Service.simulateTransaction(
@@ -198,7 +200,7 @@ export class Cat21MintComponent implements OnInit {
     this.cfeeRate.setValidators([
       Validators.required,
       Validators.min(this.minRequiredFee),
-      fullNumberValidator()
+      // fullNumberValidator()
     ]);
 
     if (this.cfeeRate.value < this.minRequiredFee) {

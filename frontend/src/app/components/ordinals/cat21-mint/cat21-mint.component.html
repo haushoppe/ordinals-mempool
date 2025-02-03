@@ -105,7 +105,8 @@
                 We automatically select your largest UTXO, but feel free to select a different one if you like:
               </p>
 
-              <a *ngIf="minRequiredFee != 1" href="javascript:void(0)" (click)="updateMinRequiredFee(1)">⚠️ Click here to disable the required fee rate check (do you know what you are doing!?)</a>
+              <a *ngIf="minRequiredFee != 0" href="javascript:void(0)" (click)="updateMinRequiredFee(0)">⚠️ Click here to disable the required fee rate check.</a>
+              <span *ngIf="minRequiredFee == 0">⚠️ Required fee rate check disabled. You can enter any value!</span>
 
               <div class="mt-4 pl-2 pr-2 pt-1 pb-1 shape-border" *ngFor="let x of paymentOutputs$ | async"
                 [ngClass]="{ selected: x === this.selectedPaymentOutput }">
